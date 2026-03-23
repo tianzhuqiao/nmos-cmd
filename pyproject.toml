@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=67.6.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nmos-cmd"
+authors = [
+  { name="Tianzhu Qiao", email="tq@feiyilin.com" },
+]
+license = "MIT"
+license-files = ["LICENSE"]
+description='nmos-cmd is a command line tool to send NMOS requests'
+readme = "README.md"
+requires-python = ">=3.0"
+classifiers = [
+    "Operating System :: OS Independent",
+]
+dependencies = [
+          'click>=8.1', 'packaging', 'platformdirs', 'requests', 'tqdm'
+      ]
+dynamic = ["version"]
+
+[tool.setuptools.dynamic]
+version = {attr = "nmos_cmd.__version__"}
+
+[project.urls]
+"Homepage" = "https://github.com/tianzhuqiao/nmos-cmd"
+
+[project.scripts]
+nmos-cmd = "nmos_cmd.__main__:main"
+
+[tool.setuptools.packages]
+find = {}
+
