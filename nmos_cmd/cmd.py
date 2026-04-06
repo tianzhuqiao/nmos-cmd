@@ -223,9 +223,9 @@ def cli():
 
 @cli.command(name="list", context_settings={'show_default': True})
 @click.option('--device', help='the device IP')
-@click.option('--port', default=3212, help='NMOS is04 port')
+@click.option('--port', default=3212, help='NMOS IS04 port')
 @click.option('--version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS is04 version')
+              help='NMOS IS04 version')
 @click.option('--receiver', multiple=True, help='only show the receiver streams with specific name')
 @click.option('--sender', multiple=True, help='only show the sender streams with specific name')
 def list_device(device, port, version, receiver, sender):
@@ -245,13 +245,13 @@ def patch():
 
 @patch.command(name="config", context_settings={'show_default': True})
 @click.option('--sender', help='sender device IP@name or IP:port@name or IP:port:version@name')
-@click.option('--sender_port', default=3212, help='NMOS is04 port')
+@click.option('--sender_port', default=3212, help='NMOS IS04 port')
 @click.option('--sender_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS is04 version')
+              help='NMOS IS04 version')
 @click.option('--receiver', help='receiver device IP@name or IP:port@name or IP:port:version@name')
-@click.option('--receiver_port', default=3212, help='NMOS is04 port')
+@click.option('--receiver_port', default=3212, help='NMOS IS04 port')
 @click.option('--receiver_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS is04 version')
+              help='NMOS IS04 version')
 @click.option('--stream', default=["video:video", "audio output 1:audio input 1", "data:data"],
               multiple=True, help='the stream to be configured, in format "sender stream"@"receiver stream"')
 @click.option('--output', help='the output patch configuration filename')
@@ -266,11 +266,14 @@ def generate_patch(sender, sender_port, sender_version, receiver, receiver_port,
 
 @patch.command(name="apply", context_settings={'show_default': True})
 @click.option('--config', 'cfg',  default="config.json", help='the patch configuration file')
-def apply_patch(cfg):
+@click.option('--port', default=3215, help='NMOS IS05 port')
+@click.option('--version', default='1.0', type=click.Choice(['1.0', '1.1']),
+              help='NMOS IS05 version')
+def apply_patch(cfg, port, version):
     """
     Apply the PATCH to the receiver streams defined in "--config".
     """
-    n = NMOS()
+    n = NMOS(is05_ver=version, is05_port=port)
     n.apply_patch(cfg)
 
 @cli.group(name="config", context_settings={'show_default': True})
