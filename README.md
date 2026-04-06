@@ -10,5 +10,16 @@ $ pip install nmos-cmd
 To start from terminal
 ```
 $ nmos-cmd --help
+Usage: nmos-cmd [OPTIONS] COMMAND [ARGS]...
+
+  A tool to connect the NMOS sender streams to receiver streams.
+
+Options:
+  --help  Show this message and exit.
+
+Commands:
+  config  Set default option for each command/subcommand.
+  list    List streams of a device.
+  patch   Send NMOS PATCH command.
 ```
 
