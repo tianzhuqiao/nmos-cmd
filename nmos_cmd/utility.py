@@ -50,6 +50,7 @@ def load_config():
     return cfg
 
 def save_config(cfg):
+    Path(get_config_dir()).mkdir(parents=True, exist_ok=True)
     filename = Path(get_config_dir())/f"{PROJECT_NAME}.ini"
     with open(filename, 'w', encoding='utf-8') as file:
         json.dump(cfg, file, indent=4)

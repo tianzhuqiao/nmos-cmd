@@ -1,4 +1,5 @@
 import os
+import re
 from pathlib import Path
 import json
 import requests
@@ -191,16 +192,25 @@ class NMOS:
         with open(p, "w", encoding='utf-8') as json_file:
             json.dump(mapping, json_file, indent=4)
 
-    def apply_patch(self, cfg):
+    def apply_patch(self, cfg, mode, requested_time):
         """
         Sent the PATCH command one by one defined in the configuration json file.
         """
+        if mode not in ['immediate', 'scheduled_absolute', 'scheduled_relative']:
+            error(f"Unknown activation mode: {mode}")
+            return
+        if mode == 'immediate':
+            requested_time = None
+        elif not re.match(r'^[0-9]+:[0-9]+$', requested_time):
+            error(f"Unknown requested time: {requested_time}")
+            return
+
         with open(cfg, 'r', encoding='utf-8') as file:
             cfg = json.load(file)
             for c in cfg:
                 device, rx_name, rx, sdp = c
-                data = {"activation":{"mode": "activate_immediate",
-                                      "requested_time": None
+                data = {"activation":{"mode": f"activate_{mode}",
+                                      "requested_time": requested_time
                                       },
                         "transport_file": {"data": "\r\n".join(sdp.lstrip().split('\n')),
                                            "type": "application/sdp"
@@ -269,12 +279,16 @@ def generate_patch(sender, sender_port, sender_version, receiver, receiver_port,
 @click.option('--port', default=3215, help='NMOS IS05 port')
 @click.option('--version', default='1.0', type=click.Choice(['1.0', '1.1']),
               help='NMOS IS05 version')
-def apply_patch(cfg, port, version):
+@click.option('--mode', default='immediate',
+              type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
+              help='Activation mode')
+@click.option('--requested_time', help='requested time')
+def apply_patch(cfg, port, version, mode, requested_time):
     """
     Apply the PATCH to the receiver streams defined in "--config".
     """
     n = NMOS(is05_ver=version, is05_port=port)
-    n.apply_patch(cfg)
+    n.apply_patch(cfg, mode, requested_time)
 
 @cli.group(name="config", context_settings={'show_default': True})
 def config():
