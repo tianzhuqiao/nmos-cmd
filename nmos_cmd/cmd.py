@@ -214,6 +214,10 @@ class NMOS:
         p = Path(output)
         if not p.suffix:
             p = p.with_suffix('.json')
+
+        if p.is_file():
+            if not click.confirm(f"'{p}' exists; would you like to overwrite it?", default=False):
+                return
         info(f"Save the config to {p}")
         with open(p, "w", encoding='utf-8') as json_file:
             json.dump(mapping, json_file, indent=4)
