@@ -5,7 +5,7 @@ import json
 import requests
 import click
 from .utility import get_folder_in_config as _F
-from .utility import success, error, info, load_config, save_config
+from .utility import success, error, warning, info, load_config, save_config
 
 
 class NMOS:
@@ -144,6 +144,32 @@ class NMOS:
             ip, port, ver = ip
         return ip, port, ver, name
 
+    def _expand_streams(self, stream):
+        stream2 = []
+        for s in stream:
+            expanded = False
+            s2 = s.split(":")
+            if len(s2) != 2:
+                warning(f"Invalid stream: {s}")
+                continue
+            tx = re.findall(r"\d?~\d?", s2[0])
+            rx = re.findall(r"\d?~\d?", s2[1])
+            if len(rx) == 1 and len(tx) == 1 and tx == rx:
+                # expand "audio output 1~8:audio input 1~8" to
+                # audio output 1:audio input 1
+                # audio output 1:audio input 2
+                # ...
+                # audio output 1:audio input 8
+                rng = tx[0].split("~")
+                if len(rng) == 2 and rng[0].isnumeric() and rng[1].isnumeric():
+                    for idx in range(int(rng[0]), int(rng[1]) + 1):
+                        stream2.append(s.replace(tx[0], str(idx)))
+                    expanded = True
+
+            if not expanded:
+                stream2.append(s)
+            return stream2
+
     def generate_patch(self, sender, sender_port, sender_version, receiver,
                        receiver_port, receiver_version, stream, output):
         """
@@ -162,7 +188,7 @@ class NMOS:
         rx = rx_d.get_receiver(rx_ip, rx_name)
         mapping = []
         info("Connect sender streams to receiver streams")
-        for s in stream:
+        for s in self._expand_streams(stream):
             s = s.split(":")
             if len(s) == 1:
                 s = [s, s]
@@ -262,7 +288,7 @@ def patch():
 @click.option('--receiver_port', default=3212, help='NMOS IS04 port')
 @click.option('--receiver_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
               help='NMOS IS04 version')
-@click.option('--stream', default=["video:video", "audio output 1:audio input 1", "data:data"],
+@click.option('--stream', default=["video:video"],
               multiple=True, help='the stream to be configured, in format "sender stream"@"receiver stream"')
 @click.option('--output', help='the output patch configuration filename')
 def generate_patch(sender, sender_port, sender_version, receiver, receiver_port,
@@ -282,7 +308,7 @@ def generate_patch(sender, sender_port, sender_version, receiver, receiver_port,
 @click.option('--mode', default='immediate',
               type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
               help='Activation mode')
-@click.option('--requested_time', help='requested time')
+@click.option('--requested_time', help='Requested time')
 def apply_patch(cfg, port, version, mode, requested_time):
     """
     Apply the PATCH to the receiver streams defined in "--config".
