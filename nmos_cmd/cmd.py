@@ -14,7 +14,7 @@ def cli():
     """
 
 @cli.command(name="list", context_settings={'show_default': True})
-@click.option('--device', help='the device IP')
+@click.option('--device', required=True, help='the device IP')
 @click.option('--port', default=3212, help='NMOS IS04 port')
 @click.option('--version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
               help='NMOS IS04 version')

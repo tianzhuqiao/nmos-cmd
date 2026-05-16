@@ -11,32 +11,37 @@ def rx():
     """
 
 @rx.command(name="dump", context_settings={'show_default': True})
-@click.option('--device', help='receiver device IP@name or IP:port@name or IP:port:version@name')
+@click.option('--device', required=True,
+              help='receiver device IP@name or IP:port@name or IP:port:version@name')
 @click.option('--port', default=3212, help='NMOS IS04 port')
 @click.option('--version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
               help='NMOS IS04 version')
 @click.option('--stream', default=["video"],
-              multiple=True, help='the stream to be configured')
-@click.option('--output', help='the output configuration filename')
+              multiple=True, help='the stream to be dumped')
+@click.option('--output', default="config.json", type=click.Path(exists=True, dir_okay=False),
+              help='the output configuration filename')
 def dump_rx(device, port, version, stream, output):
     """
-    Generate the configuration file to connect the sender streams to the receiver streams.
+    Dump the current configuration to a file.
     """
     n = NMOS()
     n.dump_rx(device, port, version, stream, output)
 
 @rx.command(name="config", context_settings={'show_default': True})
-@click.option('--sender', help='sender device IP@name or IP:port@name or IP:port:version@name')
+@click.option('--sender', required=True,
+              help='sender device IP@name or IP:port@name or IP:port:version@name')
 @click.option('--sender_port', default=3212, help='NMOS IS04 port')
 @click.option('--sender_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
               help='NMOS IS04 version')
-@click.option('--receiver', help='receiver device IP@name or IP:port@name or IP:port:version@name')
+@click.option('--receiver', required=True,
+              help='receiver device IP@name or IP:port@name or IP:port:version@name')
 @click.option('--receiver_port', default=3212, help='NMOS IS04 port')
 @click.option('--receiver_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
               help='NMOS IS04 version')
-@click.option('--stream', default=["video:video"],
-              multiple=True, help='the stream to be configured, in format "sender stream"@"receiver stream"')
-@click.option('--output', help='the output patch configuration filename')
+@click.option('--stream', default=["video:video"], multiple=True,
+              help='the stream to be configured, in format "sender stream"@"receiver stream"')
+@click.option('--output', default="config.json", type=click.Path(exists=False, dir_okay=False),
+              help='the output patch configuration filename')
 def config_rx(sender, sender_port, sender_version, receiver, receiver_port,
                    receiver_version, stream, output):
     """
@@ -47,7 +52,8 @@ def config_rx(sender, sender_port, sender_version, receiver, receiver_port,
                      receiver_version, stream, output)
 
 @rx.command(name="apply", context_settings={'show_default': True})
-@click.option('--config', 'cfg', default="config.json", type=click.Path(exists=True, dir_okay=False),
+@click.option('--config', 'cfg', default="config.json",
+              type=click.Path(exists=True, dir_okay=False),
               help='the patch configuration file')
 @click.option('--port', default=3215, help='NMOS IS05 port')
 @click.option('--version', default='1.0', type=click.Choice(['1.0', '1.1']),
