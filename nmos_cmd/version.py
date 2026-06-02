@@ -2,7 +2,7 @@ PROJECT_NAME     = 'nmos-cmd'
 
 VER_MAJOR        = 0
 VER_MINOR        = 0
-VER_RELEASE      = 1
+VER_RELEASE      = 2
 
 VER_FLAGS        = ""
 
