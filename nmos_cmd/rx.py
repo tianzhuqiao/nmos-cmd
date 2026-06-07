@@ -39,7 +39,7 @@ def dump_rx(device, port, version, stream, output):
 @click.option('--receiver_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
               help='NMOS IS04 version')
 @click.option('--stream', default=["video:video"], multiple=True,
-              help='the stream to be configured, in format "sender stream"@"receiver stream"')
+              help='the stream to be configured, in format: "sender stream":"receiver stream"')
 @click.option('--output', default="config.json", type=click.Path(exists=False, dir_okay=False),
               help='the output patch configuration filename')
 def config_rx(sender, sender_port, sender_version, receiver, receiver_port,
