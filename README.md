@@ -37,7 +37,7 @@ To generate a configuration file to connect a sender to a receiver. For the **--
 - **--stream "A:B"**: connect the sender stream with "A" in its label to the receiver stream with "B" in its label.
 - **--stream "A 1\~8:B 1\~8"**: connect the sender stream with "A 1" in its label to the receiver stream with "B 1" in its label; connect the sender stream with "A 2" in its label to the receiver stream with "B 2" in its label ...
 ```
-$ nmos-cmd receiver config --sender "xx.xx.xx.xx@sender label" --receiver "xx.xx.xx.xx@receiver label" --stream "video:video" --stream "audio 1~8:udio 1~8" --output config.json
+$ nmos-cmd receiver config --sender "xx.xx.xx.xx@<sender label>" --receiver "xx.xx.xx.xx@<receiver label>" --stream "video:video" --stream "audio 1~8:audio 1~8" --output config.json
 ```
 
 Apply the configuration to the receiver
