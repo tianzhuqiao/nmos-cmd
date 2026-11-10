@@ -56,16 +56,18 @@ def config_rx(sender, sender_port, sender_version, receiver, receiver_port,
               type=click.Path(exists=True, dir_okay=False),
               help='the patch configuration file')
 @click.option('--port', default=3215, help='NMOS IS05 port')
-@click.option('--version', default='1.0', type=click.Choice(['1.0', '1.1']),
+@click.option('--version', default='1.0', type=click.Choice(['1.0', '1.1', '1.2']),
               help='NMOS IS05 version')
 @click.option('--mode', default='immediate',
               type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
               help='Activation mode')
 @click.option('--requested_time', help='Requested time')
 @click.option('--bulk', is_flag=True, help='Send with single bulk command')
-def apply_rx(cfg, port, version, mode, requested_time, bulk):
+@click.option('--curl', is_flag=True, help='Print the corresponding curl command')
+@click.option('--verbose', is_flag=True, help='Be verbose')
+def apply_rx(cfg, port, version, mode, requested_time, bulk, curl, verbose):
     """
     Apply the PATCH to the receiver streams defined in "--config".
     """
     n = NMOS(is05_ver=version, is05_port=port)
-    n.apply_rx(cfg, mode, requested_time, bulk)
+    n.apply_rx(cfg, mode, requested_time, bulk=bulk, curl=curl, verbose=verbose)

@@ -4,6 +4,7 @@ from pathlib import Path
 import json
 import requests
 import click
+import requests_to_curl
 from .utility import get_folder_in_config as _F
 from .utility import success, error, warning, info, load_config
 
@@ -189,8 +190,6 @@ class NMOS:
                 return
 
             for rid in s_rx:
-                url = f"{self.get_is05_url(rx_ip)}/single/receivers/{rx[rid]}"
-                print(url)
                 r = requests.get(f"{self.get_is05_url(rx_ip)}/single/receivers/{rx[rid]}/active",
                                  timeout=self.timeout)
                 mapping.append({'ip':rx_ip, 'label': rid, 'id':rx[rid], 'param':r.json()})
@@ -269,7 +268,7 @@ class NMOS:
         with open(p, "w", encoding='utf-8') as json_file:
             json.dump(mapping, json_file, indent=4)
 
-    def apply_rx(self, cfg, mode, requested_time, bulk):
+    def apply_rx(self, cfg, mode, requested_time, bulk=False, curl=False,  verbose=False):
         """
         Sent the PATCH command one by one defined in the configuration json file.
         """
@@ -302,11 +301,16 @@ class NMOS:
 
                 url = f'{self.get_is05_url(device)}/bulk/receivers'
                 response = requests.post(url, json=data_all, timeout=self.timeout)
+                if curl:
+                    cmd = requests_to_curl.parse(response, return_it=True, print_it=False)
+                    info(cmd)
                 if response.status_code != 200:
                     error(f"Patch '{rx_name}' failed: {response.status_code}")
                     error(f"    {url}")
                 else:
                     success(f"Patch '{rx_name}' succeeded: {response.status_code}")
+                if verbose:
+                    info(json.dumps(response.json(), indent=4))
 
             else:
                 for c in cfg:
@@ -314,8 +318,13 @@ class NMOS:
 
                     url = f'{self.get_is05_url(device)}/single/receivers/{rx}/staged'
                     response = requests.patch(url, json=_process_param(param), timeout=self.timeout)
+                    if curl:
+                        cmd = requests_to_curl.parse(response, return_it=True, print_it=False)
+                        info(cmd)
                     if response.status_code != 200:
                         error(f"Patch '{rx_name}' failed: {response.status_code}")
                         error(f"    {url}")
                     else:
                         success(f"Patch '{rx_name}' succeeded: {response.status_code}")
+                    if verbose:
+                        info(json.dumps(response.json(), indent=4))

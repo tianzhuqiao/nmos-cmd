@@ -16,7 +16,8 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-          'click>=8.1', 'packaging', 'platformdirs', 'requests', 'tqdm', 'auto-click-auto'
+          'click>=8.1', 'packaging', 'platformdirs', 'requests', 'tqdm',
+          'auto-click-auto', 'requests_to_curl'
       ]
 dynamic = ["version"]
 
