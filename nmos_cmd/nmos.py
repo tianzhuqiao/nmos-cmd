@@ -33,13 +33,13 @@ class NMOS:
 
     def get_is04_url(self, device):
         """
-        Generate the IS04 url (node) for device
+        Generate the IS-04 url (node) for device
         """
         return f"http://{device}:{self.is04_port}/x-nmos/node/v{self.is04_ver}"
 
     def get_is05_url(self, device):
         """
-        Generate the IS05 url (connection) for device
+        Generate the IS-05 url (connection) for device
         """
         return f"http://{device}:{self.is05_port}/x-nmos/connection/v{self.is05_ver}"
 
@@ -206,10 +206,12 @@ class NMOS:
         with open(p, "w", encoding='utf-8') as json_file:
             json.dump(mapping, json_file, indent=4)
 
-    def _get_cfg(self, sdp):
+    def _get_rx_cfg(self, sdp, master_enable, sender_id=None):
         data = {"activation":{"mode": '{mode}',
                               "requested_time": '{requested_time}'
                               },
+                "master_enable": master_enable,
+                "sender_id": sender_id,
                 "transport_file": {"data": "\r\n".join(sdp.lstrip().split('\n')),
                                    "type": "application/sdp"
                                    }
@@ -252,9 +254,13 @@ class NMOS:
                 return
             s_rx = s_rx[0]
 
+            rx_info = requests.get(f"{self.get_is05_url(rx_ip)}/single/receivers/{rx[s_rx]}/active",
+                                   timeout=self.timeout)
+            rx_info = rx_info.json()
+            master_enable = rx_info['master_enable']
             with open(Path(_F(tx_ip))/tx[s_tx], 'r', encoding='utf-8') as file:
                 sdp = file.read()
-                mapping.append({'ip': rx_ip, 'label': s_rx, 'id': rx[s_rx], 'param': self._get_cfg(sdp)})
+                mapping.append({'ip': rx_ip, 'label': s_rx, 'id': rx[s_rx], 'param': self._get_rx_cfg(sdp, master_enable, tx[s_tx])})
 
         # save the patch configuration
         p = Path(output)
@@ -268,7 +274,7 @@ class NMOS:
         with open(p, "w", encoding='utf-8') as json_file:
             json.dump(mapping, json_file, indent=4)
 
-    def apply_rx(self, cfg, mode, requested_time, bulk=False, curl=False,  verbose=False):
+    def apply_rx(self, cfg, mode, requested_time, master_enable=None, bulk=False, curl=False,  verbose=False):
         """
         Sent the PATCH command one by one defined in the configuration json file.
         """
@@ -288,6 +294,9 @@ class NMOS:
 
             if param['activation'].get('requested_time', '{requested_time}') == '{requested_time}':
                 param['activation']['requested_time'] = requested_time
+
+            if master_enable is not None:
+                param['master_enable'] = master_enable
             return param
 
         with open(cfg, 'r', encoding='utf-8') as file:
