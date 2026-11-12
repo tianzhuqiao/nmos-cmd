@@ -15,11 +15,11 @@ def cli():
 
 @cli.command(name="list", context_settings={'show_default': True})
 @click.option('--device', required=True, help='the device IP')
-@click.option('--port', default=3212, help='NMOS IS04 port')
+@click.option('--port', default=3212, help='NMOS IS-04 port')
 @click.option('--version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS IS04 version')
-@click.option('--receiver', multiple=True, help='only show the receiver streams with specific name')
-@click.option('--sender', multiple=True, help='only show the sender streams with specific name')
+              help='NMOS IS-04 version')
+@click.option('--receiver', multiple=True, help='Show the receiver streams with specific name, "*" for all')
+@click.option('--sender', multiple=True, help='Show the sender streams with specific name, "*" for all')
 def list_device(device, port, version, receiver, sender):
     """
     List streams of a device.
@@ -53,6 +53,28 @@ def config_set(key, value):
         t = t[k]
     t[key.split('.')[-1]] = value
     save_config(cfg)
+
+@config.command(name="clear", context_settings={'show_default': True})
+@click.argument('key')
+def config_clear(key):
+    """
+    Clear default option for each command.
+
+    For example, the following command will clear the default port for "list" command
+
+       nmos-patch config clear list.port
+    """
+
+    cfg = load_config()
+    t = cfg
+    for k in key.split('.')[:-1]:
+        if k not in cfg:
+            # not find the key
+            return
+        t = t[k]
+    t.pop(key.split('.')[-1], None)
+    save_config(cfg)
+
 
 @config.command(name="list", context_settings={'show_default': True})
 def config_list():

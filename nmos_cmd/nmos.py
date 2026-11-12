@@ -113,17 +113,22 @@ class NMOS:
         os.makedirs(_F(device), exist_ok=True)
         for dd in d:
             info(dd["description"])
-            for rid in dd["receivers"]:
-                r = requests.get(f"{self.get_is04_url(device)}/receivers/{rid}",
-                                 timeout=self.timeout)
-                r = r.json()
-                if not receiver or all(rx in r["label"] for rx in receiver):
-                    info(f"    {r['label']} {r['id']}")
-            for sid in dd["senders"]:
-                r = requests.get(f"{self.get_is04_url(device)}/senders/{sid}", timeout=self.timeout)
-                r = r.json()
-                if not sender or all(tx in r["label"] for tx in sender):
-                    info(f"    {r['label']} {r['id']} {r['manifest_href']}")
+            if receiver:
+                for rid in dd["receivers"]:
+                    r = requests.get(f"{self.get_is04_url(device)}/receivers/{rid}",
+                                     timeout=self.timeout)
+                    r = r.json()
+                    if "*" in receiver or all(rx in r["label"] for rx in receiver):
+                        info(f"    {r['label'].replace(dd['description'], '')}:")
+                        info(f"        id: {r['id']}")
+            if sender:
+                for sid in dd["senders"]:
+                    r = requests.get(f"{self.get_is04_url(device)}/senders/{sid}", timeout=self.timeout)
+                    r = r.json()
+                    if "*" in sender or all(tx in r["label"] for tx in sender):
+                        info(f"    {r['label'].replace(dd['description'], '')}:")
+                        info(f"        id: {r['id']}")
+                        info(f"       sdp: {r['manifest_href']}")
 
     def _parse_device(self, device, port, ver):
         """
