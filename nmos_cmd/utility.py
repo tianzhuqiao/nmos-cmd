@@ -54,3 +54,12 @@ def save_config(cfg):
     filename = Path(get_config_dir())/f"{PROJECT_NAME}.ini"
     with open(filename, 'w', encoding='utf-8') as file:
         json.dump(cfg, file, indent=4)
+
+def ask_yes_no(question: str) -> bool:
+    while True:
+        answer = input(f"{question} (y/n): ").strip().lower()
+        if answer in ("y", "yes"):
+            return True
+        if answer in ("n", "no"):
+            return False
+        print("Invalid input. Please enter 'y' or 'n'.")

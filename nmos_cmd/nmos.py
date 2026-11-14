@@ -6,7 +6,7 @@ import requests
 import click
 import requests_to_curl
 from .utility import get_folder_in_config as _F
-from .utility import success, error, warning, info, load_config
+from .utility import success, error, warning, info, load_config, ask_yes_no
 
 
 class NMOS:
@@ -136,7 +136,9 @@ class NMOS:
 
         If port/version is defined in "device", it will take priority.
         """
-        ip, name = device.split('@')
+        ip, name = device, ''
+        if '@' in device:
+            ip, name = device.split('@')
         ip = ip.split(':')
         if port is None:
             port = self.is04_port
@@ -342,3 +344,45 @@ class NMOS:
                         success(f"Patch '{rx_name}' succeeded: {response.status_code}")
                     if verbose:
                         info(json.dumps(response.json(), indent=4))
+
+    def enable_rx(self, device, mode, requested_time, stream, enable, curl=False, verbose=False):
+        """
+        Enable/disable receiver streams.
+        """
+        info("Get receiver streams ...")
+        rx_ip, _, _, rx_name = self._parse_device(device, None, None)
+        rx = self.get_receiver(rx_ip, rx_name)
+
+        if mode == 'immediate':
+            requested_time = None
+
+        param = {
+                "activation": {
+                    "mode": f"{mode}",
+                    "requested_time": requested_time
+                    },
+                "master_enable": enable
+                }
+        data_all = []
+        stream = self._expand_streams(stream)
+        for label, rid in rx.items():
+            if not stream or any(((s in label) or (rid == s)) for s in stream):
+                info(f"{label}")
+                data_all.append({'id': rid,
+                                 'param': dict(param)})
+        action = "enable" if enable else "disable"
+        if not ask_yes_no(f"Would you want to {action} all the above receivers streams?"):
+            return
+
+        url = f'{self.get_is05_url(device)}/bulk/receivers'
+        response = requests.post(url, json=data_all, timeout=self.timeout)
+        if curl:
+            cmd = requests_to_curl.parse(response, return_it=True, print_it=False)
+            info(cmd)
+        if response.status_code != 200:
+            error(f"Patch '{rx_name}' failed: {response.status_code}")
+            error(f"    {url}")
+        else:
+            success(f"Patch '{rx_name}' succeeded: {response.status_code}")
+        if verbose:
+            info(json.dumps(response.json(), indent=4))

@@ -72,3 +72,51 @@ def apply_rx(cfg, port, version, mode, requested_time, master_enable, bulk, curl
     """
     n = NMOS(is05_ver=version, is05_port=port)
     n.apply_rx(cfg, mode, requested_time, master_enable, bulk=bulk, curl=curl, verbose=verbose)
+
+@rx.command(name="enable", context_settings={'show_default': True})
+@click.option('--device', required=True,
+              help='receiver device IP or IP@name')
+@click.option('--port_is04', default=3212, help='NMOS IS-04 port')
+@click.option('--version_is04', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
+              help='NMOS IS-04 version')
+@click.option('--port_is05', default=3215, help='NMOS IS-05 port')
+@click.option('--version_is05', default="1.0", type=click.Choice(['1.0', '1.1', '1.2']),
+              help='NMOS IS-05 version')
+@click.option('--mode', default='immediate',
+              type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
+              help='Activation mode')
+@click.option('--requested_time', help='Requested time')
+@click.option('--stream', default=["video"],
+              multiple=True, help='Stream to be enabled (id or label)')
+@click.option('--curl', is_flag=True, help='Print the corresponding curl command')
+@click.option('--verbose', is_flag=True, help='Be verbose')
+def enable_rx(device, port_is04, version_is04, port_is05, version_is05, mode, requested_time, stream, curl, verbose):
+    """
+    Enable receiver streams.
+    """
+    n = NMOS(is04_ver=version_is04, is04_port=port_is04, is05_ver=version_is05, is05_port=port_is05)
+    n.enable_rx(device, mode, requested_time, stream, True, curl=curl, verbose=verbose)
+
+@rx.command(name="disable", context_settings={'show_default': True})
+@click.option('--device', required=True,
+              help='receiver device IP@name or IP:port@name or IP:port:version@name')
+@click.option('--port_is04', default=3212, help='NMOS IS-04 port')
+@click.option('--version_is04', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
+              help='NMOS IS-04 version')
+@click.option('--port_is05', default=3215, help='NMOS IS-05 port')
+@click.option('--version_is05', default="1.0", type=click.Choice(['1.0', '1.1', '1.2']),
+              help='NMOS IS-05 version')
+@click.option('--mode', default='immediate',
+              type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
+              help='Activation mode')
+@click.option('--requested_time', help='Requested time')
+@click.option('--stream', default=["video"],
+              multiple=True, help='Stream to be enabled (id or label)')
+@click.option('--curl', is_flag=True, help='Print the corresponding curl command')
+@click.option('--verbose', is_flag=True, help='Be verbose')
+def disable_rx(device, port_is04, version_is04, port_is05, version_is05, mode, requested_time, stream, curl, verbose):
+    """
+    Disable receiver streams.
+    """
+    n = NMOS(is04_ver=version_is04, is04_port=port_is04, is05_ver=version_is05, is05_port=port_is05)
+    n.enable_rx(device, mode, requested_time, stream, False, curl=curl, verbose=verbose)
