@@ -5,6 +5,7 @@ from auto_click_auto.utils import detect_shell
 from .utility import info, load_config, save_config
 from .nmos import NMOS
 from .rx import rx
+from .tx import tx
 from .version import PROJECT_NAME
 
 @click.group()
@@ -101,3 +102,4 @@ except:
     pass
 
 cli.add_command(rx)
+cli.add_command(tx)

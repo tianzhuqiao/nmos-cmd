@@ -1,4 +1,5 @@
 from pathlib import Path
+import functools
 import json
 import platformdirs
 import click
@@ -55,11 +56,43 @@ def save_config(cfg):
     with open(filename, 'w', encoding='utf-8') as file:
         json.dump(cfg, file, indent=4)
 
-def ask_yes_no(question: str) -> bool:
-    while True:
-        answer = input(f"{question} (y/n): ").strip().lower()
-        if answer in ("y", "yes"):
-            return True
-        if answer in ("n", "no"):
-            return False
-        print("Invalid input. Please enter 'y' or 'n'.")
+def port_ver_option(port, ver, spec):
+    def _common_options(f):
+        options = []
+        if spec == "is04":
+            options = [
+                    click.option(f'--{port}', default=3212, help='NMOS IS-04 port'),
+                    click.option(f'--{ver}', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
+                                 help='NMOS IS-04 version')
+                    ]
+        elif spec == "is05":
+            options = [
+                    click.option(f'--{port}', default=3215, help='NMOS IS-05 port'),
+                    click.option(f'--{ver}', default="1.0", type=click.Choice(['1.0', '1.1', '1.2']),
+                                 help='NMOS IS-05 version')
+                    ]
+
+        return functools.reduce(lambda x, opt: opt(x), reversed(options), f)
+    return _common_options
+
+def commom_patch_options():
+    def _common_options(f):
+        options = [click.option('--mode', default='immediate',
+                                type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
+                                help='Activation mode'),
+                   click.option('--requested_time', help='Requested time'),
+                   click.option('--curl', is_flag=True, help='Print the corresponding curl command'),
+                   click.option('--verbose', is_flag=True, help='Be verbose')
+        ]
+
+        return functools.reduce(lambda x, opt: opt(x), reversed(options), f)
+    return _common_options
+
+def other_patch_options():
+    def _common_options(f):
+        options = [click.option('--device', required=True,
+                                help='device IP or IP@name'),
+                   click.option('--stream', multiple=True, help='Stream to be enabled (id or label)')
+                   ]
+        return functools.reduce(lambda x, opt: opt(x), reversed(options), f)
+    return _common_options

@@ -6,7 +6,7 @@ import requests
 import click
 import requests_to_curl
 from .utility import get_folder_in_config as _F
-from .utility import success, error, warning, info, load_config, ask_yes_no
+from .utility import success, error, warning, info, load_config
 
 
 class NMOS:
@@ -47,7 +47,7 @@ class NMOS:
         """
         Return the receiver streams of "device" filtered by the name in "receiver"
 
-        The output is the dictionary: {stream label: stream id}
+        The output is the dictionary: {stream id: stream label}
         """
         result = {}
         res = requests.get(f"{self.get_is04_url(device)}/devices/", timeout=self.timeout)
@@ -60,7 +60,7 @@ class NMOS:
                                  timeout=self.timeout)
                 r = r.json()
                 if not receiver or all(rec in r["label"] for rec in receiver):
-                    result[r['label']] = r['id']
+                    result[r['id']] = r['label']
 
         return result
 
@@ -68,7 +68,7 @@ class NMOS:
         """
         Return the sender streams of "device" filtered by the name in "sender"
 
-        The output is the dictionary: {stream label: stream id}, ant it will also
+        The output is the dictionary: {stream id: stream label}, and it will also
         download the corresponding sdp to be used by the receiver streams.
         """
         result = {}
@@ -81,7 +81,7 @@ class NMOS:
                 r = requests.get(f"{self.get_is04_url(device)}/senders/{sid}", timeout=self.timeout)
                 r = r.json()
                 if not sender or all(rec in r["label"] for rec in sender):
-                    result[r['label']] = r['id']
+                    result[r['id']] = r['label']
                     if download:
                         self.download_sdp(r['manifest_href'], _F(device), r['id'])
 
@@ -123,7 +123,8 @@ class NMOS:
                         info(f"        id: {r['id']}")
             if sender:
                 for sid in dd["senders"]:
-                    r = requests.get(f"{self.get_is04_url(device)}/senders/{sid}", timeout=self.timeout)
+                    r = requests.get(f"{self.get_is04_url(device)}/senders/{sid}",
+                                     timeout=self.timeout)
                     r = r.json()
                     if "*" in sender or all(tx in r["label"] for tx in sender):
                         info(f"    {r['label'].replace(dd['description'], '')}:")
@@ -178,40 +179,45 @@ class NMOS:
                 stream2.append(s)
         return stream2
 
-    def dump_rx(self, device, port, version, stream, output):
+    def list_stream(self, device, port, version, stream, output, receiver=True):
         """
-        Dump the config json file of receiver.
+        List stream or save it to "output".
         """
-        info("Get receiver streams")
-        rx_ip, rx_port, rx_ver, rx_name = self._parse_device(device, port,
-                                                             version)
-        rx_d = NMOS(is04_port=rx_port, is04_ver=rx_ver)
-        rx = rx_d.get_receiver(rx_ip, rx_name)
-        mapping = []
-        info("dump receiver streams")
-        for s in self._expand_streams(stream):
-            # find the rx stream
-            s_rx = [ r for r in rx if s in r]
-            if len(s_rx) != 1:
-                error(f"Multiple or no streams found in receiver '{s}'!")
-                return
+        ip, port, ver, name = self._parse_device(device, port, version)
+        d = NMOS(is04_port=port, is04_ver=ver)
 
-            for rid in s_rx:
-                r = requests.get(f"{self.get_is05_url(rx_ip)}/single/receivers/{rx[rid]}/active",
-                                 timeout=self.timeout)
-                mapping.append({'ip':rx_ip, 'label': rid, 'id':rx[rid], 'param':r.json()})
+        types = "receivers" if receiver else "senders"
+        info(f"Get {types[:-1]} streams ...")
+        if receiver:
+            all_streams = d.get_receiver(ip, name)
+        else:
+            all_streams = d.get_sender(ip, name, False)
+        stream_info = []
+        stream = self._expand_streams(stream)
+        for sid, label in all_streams.items():
+            # find the rx/tx stream
+            if stream and (not any(((s in label) or (sid == s)) for s in stream)):
+                continue
+
+            r = requests.get(f"{self.get_is05_url(ip)}/single/{types}/{sid}/active",
+                             timeout=self.timeout)
+            stream_info.append({'ip':ip, 'label':label, 'id':sid, 'param':r.json()})
+
+            if output is None:
+                info(json.dumps(stream_info[-1], indent=4))
 
         # save the patch configuration
-        p = Path(output)
-        if not p.suffix:
-            p = p.with_suffix('.json')
+        if output is not None:
+            p = Path(output)
+            if not p.suffix:
+                p = p.with_suffix('.json')
 
-        if p.is_file():
-            if not click.confirm(f"'{p}' exists; would you like to overwrite it?", default=False):
-                return
-        info(f"Save the config to {p}")
-        with open(p, "w", encoding='utf-8') as json_file:
-            json.dump(mapping, json_file, indent=4)
+            if p.is_file():
+                if not click.confirm(f"'{p}' exists; would you like to overwrite it?", default=False):
+                    return
+            info(f"Save the config to {p}")
+            with open(p, "w", encoding='utf-8') as json_file:
+                json.dump(stream_info, json_file, indent=4)
 
     def _get_rx_cfg(self, sdp, master_enable, sender_id=None):
         data = {"activation":{"mode": '{mode}',
@@ -248,26 +254,26 @@ class NMOS:
             if len(s) == 1:
                 s = [s, s]
             # find the tx stream
-            s_tx = [ r for r in tx if s[0] in r]
+            s_tx = [ sid for sid, label in tx.items() if (s[0] in label or sid == s[0])]
             if len(s_tx) != 1:
                 error(f"Multiple or no streams found in sender for '{s[0]}'!")
                 return
             s_tx = s_tx[0]
 
             # find the rx stream
-            s_rx = [ r for r in rx if s[1] in r]
+            s_rx = [ sid for sid, label in rx.items() if (s[1] in label or sid == s[1])]
             if len(s_rx) != 1:
                 error(f"Multiple or no streams found in receiver '{s[1]}'!")
                 return
             s_rx = s_rx[0]
 
-            rx_info = requests.get(f"{self.get_is05_url(rx_ip)}/single/receivers/{rx[s_rx]}/active",
+            rx_info = requests.get(f"{self.get_is05_url(rx_ip)}/single/receivers/{s_rx}/active",
                                    timeout=self.timeout)
             rx_info = rx_info.json()
             master_enable = rx_info['master_enable']
-            with open(Path(_F(tx_ip))/tx[s_tx], 'r', encoding='utf-8') as file:
+            with open(Path(_F(tx_ip))/s_tx, 'r', encoding='utf-8') as file:
                 sdp = file.read()
-                mapping.append({'ip': rx_ip, 'label': s_rx, 'id': rx[s_rx], 'param': self._get_rx_cfg(sdp, master_enable, tx[s_tx])})
+                mapping.append({'ip': rx_ip, 'label': rx[s_rx], 'id': s_rx, 'param': self._get_rx_cfg(sdp, master_enable, s_tx)})
 
         # save the patch configuration
         p = Path(output)
@@ -345,13 +351,17 @@ class NMOS:
                     if verbose:
                         info(json.dumps(response.json(), indent=4))
 
-    def enable_rx(self, device, mode, requested_time, stream, enable, curl=False, verbose=False):
+    def enable_stream(self, device, mode, requested_time, stream, enable, curl=False, verbose=False, receiver=True):
         """
-        Enable/disable receiver streams.
+        Enable/disable streams.
         """
-        info("Get receiver streams ...")
-        rx_ip, _, _, rx_name = self._parse_device(device, None, None)
-        rx = self.get_receiver(rx_ip, rx_name)
+        types = "receivers" if receiver else "senders"
+        info(f"Get {types[:-1]} streams ...")
+        ip, _, _, name = self._parse_device(device, None, None)
+        if receiver:
+            all_streams = self.get_receiver(ip, name)
+        else:
+            all_streams = self.get_sender(ip, name, download=False)
 
         if mode == 'immediate':
             requested_time = None
@@ -365,24 +375,24 @@ class NMOS:
                 }
         data_all = []
         stream = self._expand_streams(stream)
-        for label, rid in rx.items():
-            if not stream or any(((s in label) or (rid == s)) for s in stream):
+        for sid, label in all_streams.items():
+            if not stream or any(((s in label) or (sid == s)) for s in stream):
                 info(f"{label}")
-                data_all.append({'id': rid,
+                data_all.append({'id': sid,
                                  'param': dict(param)})
         action = "enable" if enable else "disable"
-        if not ask_yes_no(f"Would you want to {action} all the above receivers streams?"):
+        if not click.confirm(f"Would you want to {action} all the above {types} stream?", default=False):
             return
 
-        url = f'{self.get_is05_url(device)}/bulk/receivers'
+        url = f'{self.get_is05_url(device)}/bulk/{types}'
         response = requests.post(url, json=data_all, timeout=self.timeout)
         if curl:
             cmd = requests_to_curl.parse(response, return_it=True, print_it=False)
             info(cmd)
         if response.status_code != 200:
-            error(f"Patch '{rx_name}' failed: {response.status_code}")
+            error(f"Patch '{name}' failed: {response.status_code}")
             error(f"    {url}")
         else:
-            success(f"Patch '{rx_name}' succeeded: {response.status_code}")
+            success(f"Patch '{name}' succeeded: {response.status_code}")
         if verbose:
             info(json.dumps(response.json(), indent=4))

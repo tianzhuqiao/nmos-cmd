@@ -1,5 +1,6 @@
 import click
 from .utility import get_folder_in_config as _F
+from .utility import port_ver_option, other_patch_options, commom_patch_options
 from .nmos import NMOS
 
 @click.group(name='receiver')
@@ -10,34 +11,27 @@ def rx():
     e.g., to connect the sender streams to receiver streams.
     """
 
-@rx.command(name="dump", context_settings={'show_default': True})
+@rx.command(name="list", context_settings={'show_default': True})
 @click.option('--device', required=True,
-              help='receiver device IP@name or IP:port@name or IP:port:version@name')
-@click.option('--port', default=3212, help='NMOS IS-04 port')
-@click.option('--version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS IS-04 version')
-@click.option('--stream', default=["video"],
-              multiple=True, help='the stream to be dumped')
-@click.option('--output', default="config.json", type=click.Path(exists=True, dir_okay=False),
-              help='the output configuration filename')
-def dump_rx(device, port, version, stream, output):
+              help='Device IP@name or IP:port@name or IP:port:version@name')
+@port_ver_option("port", "version", "is04")
+@click.option('--stream', multiple=True, help='Stream to be shown')
+@click.option('--output', type=click.Path(exists=True, dir_okay=False),
+              help='If provided, save the configuration to a file')
+def list_rx(device, port, version, stream, output):
     """
-    Dump the current configuration to a file.
+    Show the current configuration, or save it to a file.
     """
     n = NMOS()
-    n.dump_rx(device, port, version, stream, output)
+    n.list_stream(device, port, version, stream, output, receiver=True)
 
 @rx.command(name="config", context_settings={'show_default': True})
 @click.option('--sender', required=True,
               help='sender device IP@name or IP:port@name or IP:port:version@name')
-@click.option('--sender_port', default=3212, help='NMOS IS-04 port')
-@click.option('--sender_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS IS-04 version')
+@port_ver_option("sender_port", "sender_version", "is04")
 @click.option('--receiver', required=True,
               help='receiver device IP@name or IP:port@name or IP:port:version@name')
-@click.option('--receiver_port', default=3212, help='NMOS IS-04 port')
-@click.option('--receiver_version', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS IS-04 version')
+@port_ver_option("receiver_port", "receiver_version", "is04")
 @click.option('--stream', default=["video:video"], multiple=True,
               help='the stream to be configured, in format: "sender stream":"receiver stream"')
 @click.option('--output', default="config.json", type=click.Path(exists=False, dir_okay=False),
@@ -49,23 +43,15 @@ def config_rx(sender, sender_port, sender_version, receiver, receiver_port,
     """
     n = NMOS()
     n.config_rx(sender, sender_port, sender_version, receiver, receiver_port,
-                     receiver_version, stream, output)
+                receiver_version, stream, output)
 
 @rx.command(name="apply", context_settings={'show_default': True})
 @click.option('--config', 'cfg', default="config.json",
               type=click.Path(exists=True, dir_okay=False),
               help='the patch configuration file')
-@click.option('--port', default=3215, help='NMOS IS-05 port')
-@click.option('--version', default='1.0', type=click.Choice(['1.0', '1.1', '1.2']),
-              help='NMOS IS-05 version')
-@click.option('--mode', default='immediate',
-              type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
-              help='Activation mode')
-@click.option('--requested_time', help='Requested time')
-@click.option('--master_enable', type=bool, help='Enable/disable corresponding rx streams')
+@port_ver_option("port", "version", "is05")
 @click.option('--bulk', is_flag=True, help='Send with single bulk command')
-@click.option('--curl', is_flag=True, help='Print the corresponding curl command')
-@click.option('--verbose', is_flag=True, help='Be verbose')
+@commom_patch_options()
 def apply_rx(cfg, port, version, mode, requested_time, master_enable, bulk, curl, verbose):
     """
     Apply the PATCH to the receiver streams defined in "--config".
@@ -73,50 +59,33 @@ def apply_rx(cfg, port, version, mode, requested_time, master_enable, bulk, curl
     n = NMOS(is05_ver=version, is05_port=port)
     n.apply_rx(cfg, mode, requested_time, master_enable, bulk=bulk, curl=curl, verbose=verbose)
 
+
 @rx.command(name="enable", context_settings={'show_default': True})
-@click.option('--device', required=True,
-              help='receiver device IP or IP@name')
-@click.option('--port_is04', default=3212, help='NMOS IS-04 port')
-@click.option('--version_is04', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS IS-04 version')
-@click.option('--port_is05', default=3215, help='NMOS IS-05 port')
-@click.option('--version_is05', default="1.0", type=click.Choice(['1.0', '1.1', '1.2']),
-              help='NMOS IS-05 version')
-@click.option('--mode', default='immediate',
-              type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
-              help='Activation mode')
-@click.option('--requested_time', help='Requested time')
-@click.option('--stream', default=["video"],
-              multiple=True, help='Stream to be enabled (id or label)')
-@click.option('--curl', is_flag=True, help='Print the corresponding curl command')
-@click.option('--verbose', is_flag=True, help='Be verbose')
-def enable_rx(device, port_is04, version_is04, port_is05, version_is05, mode, requested_time, stream, curl, verbose):
+@other_patch_options()
+@port_ver_option("port_is04", "version_is04", "is04")
+@port_ver_option("port_is05", "version_is05", "is05")
+@commom_patch_options()
+def enable_rx(device, port_is04, version_is04, port_is05, version_is05, mode,
+              requested_time, stream, curl, verbose):
     """
     Enable receiver streams.
     """
-    n = NMOS(is04_ver=version_is04, is04_port=port_is04, is05_ver=version_is05, is05_port=port_is05)
-    n.enable_rx(device, mode, requested_time, stream, True, curl=curl, verbose=verbose)
+    n = NMOS(is04_ver=version_is04, is04_port=port_is04, is05_ver=version_is05,
+             is05_port=port_is05)
+    n.enable_stream(device, mode, requested_time, stream, True, curl=curl,
+                    verbose=verbose)
 
 @rx.command(name="disable", context_settings={'show_default': True})
-@click.option('--device', required=True,
-              help='receiver device IP@name or IP:port@name or IP:port:version@name')
-@click.option('--port_is04', default=3212, help='NMOS IS-04 port')
-@click.option('--version_is04', default="1.2", type=click.Choice(['1.0', '1.1', '1.2', '1.3']),
-              help='NMOS IS-04 version')
-@click.option('--port_is05', default=3215, help='NMOS IS-05 port')
-@click.option('--version_is05', default="1.0", type=click.Choice(['1.0', '1.1', '1.2']),
-              help='NMOS IS-05 version')
-@click.option('--mode', default='immediate',
-              type=click.Choice(['immediate', 'scheduled_absolute', 'scheduled_relative']),
-              help='Activation mode')
-@click.option('--requested_time', help='Requested time')
-@click.option('--stream', default=["video"],
-              multiple=True, help='Stream to be enabled (id or label)')
-@click.option('--curl', is_flag=True, help='Print the corresponding curl command')
-@click.option('--verbose', is_flag=True, help='Be verbose')
-def disable_rx(device, port_is04, version_is04, port_is05, version_is05, mode, requested_time, stream, curl, verbose):
+@other_patch_options()
+@port_ver_option("port_is04", "version_is04", "is04")
+@port_ver_option("port_is05", "version_is05", "is05")
+@commom_patch_options()
+def disable_rx(device, port_is04, version_is04, port_is05, version_is05, mode,
+               requested_time, stream, curl, verbose):
     """
     Disable receiver streams.
     """
-    n = NMOS(is04_ver=version_is04, is04_port=port_is04, is05_ver=version_is05, is05_port=port_is05)
-    n.enable_rx(device, mode, requested_time, stream, False, curl=curl, verbose=verbose)
+    n = NMOS(is04_ver=version_is04, is04_port=port_is04, is05_ver=version_is05,
+             is05_port=port_is05)
+    n.enable_stream(device, mode, requested_time, stream, False, curl=curl,
+                    verbose=verbose)
